@@ -37,7 +37,7 @@ function logon(req, res) {
 function logoff(req, res) {
   global.user_id = null;
 
-  res.status(200).json({ message: "Logged off" });
+  res.status(200);
 }
 
 module.exports = {
