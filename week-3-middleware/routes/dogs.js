@@ -11,7 +11,7 @@ router.get("/dogs", (req, res) => {
 
 router.post("/adopt", (req, res, next) => {
   try {
-    const { name, email, dogName } = req.body;
+    const { address, name, email, dogName } = req.body;
     if (!name || !email || !dogName) {
       throw new ValidationError("Missing required fields");
     }
@@ -25,6 +25,7 @@ router.post("/adopt", (req, res, next) => {
       message: `Adoption request received. We will contact you at ${email} for further details.`,
 
       application: {
+        address,
         name,
         email,
         dogName,
