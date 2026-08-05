@@ -4,6 +4,8 @@ const scrypt = util.promisify(crypto.scrypt);
 
 const { userSchema } = require("../validation/userSchema");
 
+const pool = require("../db/pg-pool");
+
 async function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");
   const derivedKey = await scrypt(password, salt, 64);
@@ -17,7 +19,7 @@ async function comparePassword(inputPassword, storedHash) {
   return crypto.timingSafeEqual(keyBuffer, derivedKey);
 }
 
-async function register(req, res) {
+async function register(req, res, next) {
   if (!req.body) req.body = {};
 
   const { error, value } = userSchema.validate(req.body, {
@@ -26,57 +28,64 @@ async function register(req, res) {
 
   if (error) {
     return res.status(400).json({
-      message: error.message,
+      message: "Validation failed",
+      details: error.details,
     });
   }
-
-  global.users = global.users || [];
+  let user = null;
+  value.hashed_password = await hashPassword(value.password);
 
   try {
-    const hashedPassword = await hashPassword(value.password);
-
-    const newUser = {
-      name: value.name,
-      email: value.email,
-      hashedPassword,
-    };
-
-    global.users.push(newUser);
-    global.user_id = newUser;
-
-    return res.status(201).json({
-      name: newUser.name,
-      email: newUser.email,
-    });
-  } catch (err) {
-    return res.status(500).json({
-      message: "Something went wrong creating the account.",
-    });
+    user = await pool.query(
+      `INSERT INTO users (email, name, hashed_password)
+       VALUES ($1, $2, $3) RETURNING id, email, name`,
+      [value.email, value.name, value.hashed_password],
+    );
+  } catch (e) {
+    if (e.code === "23505") {
+      return res.status(400).json({
+        message: "Email is already registered",
+      });
+    }
+    return next(e);
   }
+
+  const newUser = user.rows[0];
+
+  global.user_id = newUser.id;
+
+  return res.status(201).json({
+    name: newUser.name,
+    email: newUser.email,
+  });
 }
 
-async function logon(req, res) {
+async function logon(req, res, next) {
   if (!req.body) req.body = {};
 
   const { email, password } = req.body;
 
-  global.users = global.users || [];
+  const result = await pool.query(
+    "SELECT * FROM users WHERE email = $1",
 
-  const user = global.users.find((user) => user.email === email);
+    [email],
+  );
 
-  if (!user) {
+  if (result.rows.length === 0) {
     return res.status(401).json({ message: "Invalid email or password" });
   }
 
+  const user = result.rows[0];
+
   try {
     const goodCredentials =
-      user && (await comparePassword(password, user.hashedPassword));
+      user && (await comparePassword(password, user.hashed_password));
 
     if (!goodCredentials) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    global.user_id = user;
+    global.user_id = user.id;
 
     return res.status(200).json({
       name: user.name,
