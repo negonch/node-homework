@@ -24,11 +24,13 @@ async function create(req, res, next) {
       });
     }
 
+    const isCompleted = value.isCompleted ?? false;
+
     const task = await pool.query(
       `INSERT INTO tasks (title, is_completed, user_id)
      VALUES ($1, $2, $3)
      RETURNING id, title, is_completed`,
-      [value.title, value.isCompleted, global.user_id],
+      [value.title, isCompleted, global.user_id],
     );
 
     return res.status(201).json(task.rows[0]);
