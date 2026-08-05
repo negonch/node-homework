@@ -18,7 +18,7 @@ JOIN (SELECT o.customer_id, o.order_id, SUM(p.price * l.quantity) AS total_price
 FROM orders o
 JOIN line_items l ON o.order_id = l.order_id
 JOIN products p ON p.product_id = l.product_id
-GROUP BY o.customer_id, o.order_id) AS t ON c.customer_id = t.customer_id
+GROUP BY o.order_id) AS t ON c.customer_id = t.customer_id
 GROUP BY c.customer_id, c.customer_name
 ORDER BY c.customer_name;
 
@@ -49,7 +49,7 @@ SELECT * FROM line_items WHERE order_id = 253;
 #---------------------------------------------------------------
 #Task 4: Aggregation with Having
 
-SELECT first_name, last_name, COUNT(order_id) AS order_count 
+SELECT e.first_name, e.last_name, COUNT(order_id) AS order_count 
 FROM employees e JOIN orders o ON e.employee_id = o.employee_id 
 GROUP BY e.employee_id, e.first_name, e.last_name 
 HAVING COUNT(o.order_id) > 5 
