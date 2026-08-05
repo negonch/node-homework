@@ -32,32 +32,31 @@ async function register(req, res, next) {
       details: error.details,
     });
   }
-  let user = null;
-  value.hashed_password = await hashPassword(value.password);
 
   try {
-    user = await pool.query(
+    value.hashed_password = await hashPassword(value.password);
+
+    const user = await pool.query(
       `INSERT INTO users (email, name, hashed_password)
        VALUES ($1, $2, $3) RETURNING id, email, name`,
       [value.email, value.name, value.hashed_password],
     );
-  } catch (e) {
-    if (e.code === "23505") {
+
+    const newUser = user.rows[0];
+    global.user_id = newUser.id;
+
+    return res.status(201).json({
+      name: newUser.name,
+      email: newUser.email,
+    });
+  } catch (err) {
+    if (err.code === "23505") {
       return res.status(400).json({
         message: "Email is already registered",
       });
     }
-    return next(e);
+    return next(err);
   }
-
-  const newUser = user.rows[0];
-
-  global.user_id = newUser.id;
-
-  return res.status(201).json({
-    name: newUser.name,
-    email: newUser.email,
-  });
 }
 
 async function logon(req, res, next) {
@@ -65,21 +64,21 @@ async function logon(req, res, next) {
 
   const { email, password } = req.body;
 
-  const result = await pool.query(
-    "SELECT * FROM users WHERE email = $1",
-
-    [email],
-  );
-
-  if (result.rows.length === 0) {
-    return res.status(401).json({ message: "Invalid email or password" });
-  }
-
-  const user = result.rows[0];
-
   try {
-    const goodCredentials =
-      user && (await comparePassword(password, user.hashed_password));
+    const result = await pool.query("SELECT * FROM users WHERE email = $1", [
+      email,
+    ]);
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    const user = result.rows[0];
+
+    const goodCredentials = await comparePassword(
+      password,
+      user.hashed_password,
+    );
 
     if (!goodCredentials) {
       return res.status(401).json({ message: "Invalid email or password" });
@@ -92,15 +91,14 @@ async function logon(req, res, next) {
       email: user.email,
     });
   } catch (err) {
-    return res.status(500).json({
-      message: "Something went wrong logging in.",
-    });
+    return next(err);
   }
 }
+
 function logoff(req, res) {
   global.user_id = null;
 
-  return res.status(200);
+  return res.sendStatus(200);
 }
 
 module.exports = {
