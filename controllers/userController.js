@@ -4,7 +4,7 @@ const scrypt = util.promisify(crypto.scrypt);
 
 const { userSchema } = require("../validation/userSchema");
 
-const pool = require("../db/pg-pool");
+const prisma = require("../db/prisma");
 
 async function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -33,51 +33,54 @@ async function register(req, res, next) {
     });
   }
 
+  value.hashedPassword = await hashPassword(value.password);
+  delete value.password;
+
+  let user = null;
   try {
-    value.hashed_password = await hashPassword(value.password);
-
-    const user = await pool.query(
-      `INSERT INTO users (email, name, hashed_password)
-       VALUES ($1, $2, $3) RETURNING id, email, name`,
-      [value.email, value.name, value.hashed_password],
-    );
-
-    const newUser = user.rows[0];
-    global.user_id = newUser.id;
-
-    return res.status(201).json({
-      name: newUser.name,
-      email: newUser.email,
+    user = await prisma.user.create({
+      data: {
+        name: value.name,
+        email: value.email,
+        hashedPassword: value.hashedPassword,
+      },
+      select: { name: true, email: true, id: true }, // specify the column values to return
     });
   } catch (err) {
-    if (err.code === "23505") {
+    if (err.name === "PrismaClientKnownRequestError" && err.code === "P2002") {
       return res.status(400).json({
         message: "Email is already registered",
       });
     }
-    return next(err);
+    return next(err); // the error handler takes care of other errors
   }
+
+  global.user_id = user.id;
+
+  return res.status(201).json({
+    name: user.name,
+    email: user.email,
+  });
 }
 
 async function logon(req, res, next) {
   if (!req.body) req.body = {};
 
-  const { email, password } = req.body;
+  let { email, password } = req.body;
 
   try {
-    const result = await pool.query("SELECT * FROM users WHERE email = $1", [
-      email,
-    ]);
+    email = email.toLowerCase(); // Joi validation always converts the email to lower case
+    // but you don't want logon to fail if the user types mixed case
+    const user = await prisma.user.findUnique({ where: { email } });
+    // also Prisma findUnique can't do a case insensitive search
 
-    if (result.rows.length === 0) {
+    if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    const user = result.rows[0];
-
     const goodCredentials = await comparePassword(
       password,
-      user.hashed_password,
+      user.hashedPassword,
     );
 
     if (!goodCredentials) {
