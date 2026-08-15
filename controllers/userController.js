@@ -68,6 +68,11 @@ async function logon(req, res, next) {
 
   let { email, password } = req.body;
 
+  if (!email || !password) {
+    return res.status(400).json({
+      message: "Email and password are required",
+    });
+  }
   try {
     email = email.toLowerCase(); // Joi validation always converts the email to lower case
     // but you don't want logon to fail if the user types mixed case
