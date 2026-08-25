@@ -10,8 +10,8 @@ const app = express();
 
 const authMiddleware = require("./middleware/auth");
 const taskRouter = require("./routes/taskRoutes");
-
 const prisma = require("./db/prisma");
+const analyticsRoutes = require("./routes/analyticsRoutes");
 
 global.user_id = null;
 global.users = [];
@@ -21,6 +21,7 @@ app.use(express.json());
 // app.use("/api", timeRouter);
 app.use("/api/users", userRoutes);
 app.use("/api/tasks", authMiddleware, taskRouter);
+app.use("/api/analytics", authMiddleware, analyticsRoutes);
 
 app.get("/health", async (req, res) => {
   try {
