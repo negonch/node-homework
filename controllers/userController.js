@@ -6,6 +6,26 @@ const { userSchema } = require("../validation/userSchema");
 
 const prisma = require("../db/prisma");
 
+const { randomUUID } = require("crypto");
+const jwt = require("jsonwebtoken");
+
+const cookieFlags = (req) => {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // only when HTTPS is available
+    sameSite: "Strict",
+  };
+};
+
+const setJwtCookie = (req, res, user) => {
+  // Sign JWT
+  const payload = { id: user.id, csrfToken: randomUUID() };
+  const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" }); // 1 hour expiration
+  // Set cookie.  Note that the cookie flags have to be different in production and in test.
+  res.cookie("jwt", token, { ...cookieFlags(req), maxAge: 3600000 }); // 1 hour expiration
+  return payload.csrfToken; // this is needed in the body returned by logon() or register()
+};
+
 async function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");
   const derivedKey = await scrypt(password, salt, 64);
@@ -82,17 +102,12 @@ async function register(req, res, next) {
       return { user: newUser, welcomeTasks };
     });
 
-    // Store the user ID globally for session management (not secure for production)
-    global.user_id = result.user.id;
+    const csrfToken = setJwtCookie(req, res, result.user);
 
-    // Send response with status 201
-    res.status(201);
-    res.json({
+    return res.status(201).json({
       user: result.user,
-      welcomeTasks: result.welcomeTasks,
-      transactionStatus: "success",
+      csrfToken,
     });
-    return;
   } catch (err) {
     if (err.code === "P2002") {
       // send the appropriate error back -- the email was already registered
@@ -140,11 +155,12 @@ async function logon(req, res, next) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    global.user_id = user.id;
+    const csrfToken = setJwtCookie(req, res, user);
 
     return res.status(200).json({
       name: user.name,
       email: user.email,
+      csrfToken,
     });
   } catch (err) {
     return next(err);
@@ -152,8 +168,7 @@ async function logon(req, res, next) {
 }
 
 function logoff(req, res) {
-  global.user_id = null;
-
+  res.clearCookie("jwt", cookieFlags(req));
   return res.sendStatus(200);
 }
 

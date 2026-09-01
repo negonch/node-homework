@@ -30,7 +30,7 @@ async function create(req, res, next) {
       data: {
         title: value.title,
         isCompleted: isCompleted,
-        userId: global.user_id,
+        userId: req.user.id,
         priority: value.priority,
       },
       select: {
@@ -93,7 +93,7 @@ async function index(req, res, next) {
       });
     }
     const skip = (page - 1) * limit;
-    const whereClause = { userId: global.user_id };
+    const whereClause = { userId: req.user.id };
 
     if (req.query.find) {
       whereClause.title = {
@@ -135,12 +135,6 @@ async function index(req, res, next) {
       hasPrev: page > 1,
     };
 
-    // if (tasks.length === 0) {
-    //   return res.status(404).json({
-    //     message: "Task not found.",
-    //   });
-    // }
-
     return res.status(200).json({
       tasks,
       pagination,
@@ -164,7 +158,7 @@ async function show(req, res, next) {
       where: {
         id_userId: {
           id: taskId,
-          userId: global.user_id,
+          userId: req.user.id,
         },
       },
       select: {
@@ -221,7 +215,7 @@ async function update(req, res, next) {
       where: {
         id_userId: {
           id: taskId,
-          userId: global.user_id,
+          userId: req.user.id,
         },
       },
       select: { title: true, isCompleted: true, id: true, priority: true },
@@ -252,7 +246,7 @@ async function deleteTask(req, res, next) {
       where: {
         id_userId: {
           id: taskId,
-          userId: global.user_id,
+          userId: req.user.id,
         },
       },
       select: { title: true, isCompleted: true, id: true, priority: true },
@@ -294,7 +288,7 @@ async function bulkCreate(req, res, next) {
       title: value.title,
       isCompleted: value.isCompleted ?? false,
       priority: value.priority ?? "medium",
-      userId: global.user_id,
+      userId: req.user.id,
     });
   }
 
