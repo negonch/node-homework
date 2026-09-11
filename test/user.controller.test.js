@@ -15,6 +15,7 @@ let saveData = null;
 let saveReq = null;
 
 const cookie = require("cookie");
+
 function MockResponseWithCookies() {
   const res = httpMocks.createResponse({
     eventEmitter: EventEmitter,
@@ -47,6 +48,10 @@ describe("testing logon, register, and logoff", () => {
   it("33. A user can be registered.", async () => {
     const req = httpMocks.createRequest({
       method: "POST",
+      url: "/api/users/register",
+      headers: {
+        "X-Recaptcha-Test": process.env.RECAPTCHA_BYPASS,
+      },
       body: { name: "Bob", email: "bob@sample.com", password: "Pa$$word20" },
     });
     saveRes = MockResponseWithCookies();
@@ -114,6 +119,9 @@ describe("testing logon, register, and logoff", () => {
   it("42. can't register with an email address that is already registered", async () => {
     const req = httpMocks.createRequest({
       method: "POST",
+      headers: {
+        "X-Recaptcha-Test": process.env.RECAPTCHA_BYPASS,
+      },
       body: {
         name: "Bob1",
         email: "bob@sample.com",

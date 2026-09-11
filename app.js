@@ -32,7 +32,7 @@ app.use(helmet());
 global.users = [];
 global.tasks = [];
 
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 app.use(xss());
 // app.use("/api", timeRouter);

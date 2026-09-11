@@ -26,6 +26,8 @@ const setJwtCookie = (req, res, user) => {
   return payload.csrfToken; // this is needed in the body returned by logon() or register()
 };
 
+const { StatusCodes } = require("http-status-codes");
+
 async function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");
   const derivedKey = await scrypt(password, salt, 64);
@@ -42,25 +44,59 @@ async function comparePassword(inputPassword, storedHash) {
 async function register(req, res, next) {
   if (!req.body) req.body = {};
 
-  const { error, value } = userSchema.validate(req.body, {
-    abortEarly: false,
-  });
-
-  if (error) {
-    return res.status(400).json({
-      message: "Validation failed",
-      details: error.details,
-    });
-  }
-
-  value.hashedPassword = await hashPassword(value.password);
-  delete value.password;
-
-  // In your register method, after validation and password hashing:
-  // Do the Joi validation, so that value contains the user entry you want.
-  // hash the password, and put it in value.hashedPassword
-  // delete value.password as that doesn't get stored
   try {
+    let isPerson = false;
+    if (req.body.recaptchaToken) {
+      const token = req.body.recaptchaToken;
+      const params = new URLSearchParams();
+      params.append("secret", process.env.RECAPTCHA_SECRET);
+      params.append("response", token);
+      params.append("remoteip", req.ip);
+      const response = await fetch(
+        // might throw an error that would cause a 500 from the error handler
+        "https://www.google.com/recaptcha/api/siteverify",
+        {
+          method: "POST",
+          body: params.toString(),
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+        },
+      );
+      const data = await response.json();
+      if (data.success) isPerson = true;
+      delete req.body.recaptchaToken;
+    } else if (
+      process.env.RECAPTCHA_BYPASS &&
+      req.get("X-Recaptcha-Test") === process.env.RECAPTCHA_BYPASS
+    ) {
+      // might be a test environment
+      isPerson = true;
+    }
+    if (!isPerson) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        message: "Bot verification failed. Please complete the reCAPTCHA.",
+      });
+    }
+
+    const { error, value } = userSchema.validate(req.body, {
+      abortEarly: false,
+    });
+
+    if (error) {
+      return res.status(400).json({
+        message: "Validation failed",
+        details: error.details,
+      });
+    }
+
+    value.hashedPassword = await hashPassword(value.password);
+    delete value.password;
+
+    // In your register method, after validation and password hashing:
+    // Do the Joi validation, so that value contains the user entry you want.
+    // hash the password, and put it in value.hashedPassword
+    // delete value.password as that doesn't get stored
     const result = await prisma.$transaction(async (tx) => {
       // Create user account (similar to Assignment 6, but using tx instead of prisma)
       const newUser = await tx.user.create({
