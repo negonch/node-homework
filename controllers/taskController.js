@@ -93,7 +93,7 @@ async function index(req, res, next) {
       });
     }
     const skip = (page - 1) * limit;
-    const whereClause = { userId: req.user.id };
+    const whereClause = { userId: req.user.id, deletedAt: null };
 
     if (req.query.find) {
       whereClause.title = {
@@ -248,14 +248,23 @@ async function deleteTask(req, res, next) {
       });
     }
 
-    const deletedTask = await prisma.task.delete({
+    const deletedTask = await prisma.task.update({
       where: {
         id_userId: {
           id: taskId,
           userId: req.user.id,
         },
       },
-      select: { title: true, isCompleted: true, id: true, priority: true },
+      data: {
+        deletedAt: new Date(),
+      },
+      select: {
+        title: true,
+        isCompleted: true,
+        id: true,
+        priority: true,
+        deletedAt: true,
+      },
     });
 
     return res.status(200).json(deletedTask);
@@ -265,6 +274,33 @@ async function deleteTask(req, res, next) {
         message: "The task was not found.",
       });
     }
+    return next(err);
+  }
+}
+
+async function trashBin(req, res, next) {
+  try {
+    const tasks = await prisma.task.findMany({
+      where: {
+        userId: req.user.id,
+        deletedAt: {
+          not: null,
+        },
+      },
+      select: {
+        title: true,
+        isCompleted: true,
+        id: true,
+        priority: true,
+        createdAt: true,
+        deletedAt: true,
+      },
+      orderBy: {
+        deletedAt: "desc",
+      },
+    });
+    return res.status(200).json(tasks);
+  } catch (err) {
     return next(err);
   }
 }
@@ -321,6 +357,7 @@ module.exports = {
   show,
   update,
   deleteTask,
+  trashBin,
   taskCounter,
   bulkCreate,
 };
