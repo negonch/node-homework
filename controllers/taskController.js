@@ -122,11 +122,11 @@ async function index(req, res, next) {
       orderBy: getOrderBy(req.query),
     });
 
-    if (tasks.length === 0) {
-      return res.status(404).json({
-        error: "No tasks found",
-      });
-    }
+    // if (tasks.length === 0) {
+    //   return res.status(404).json({
+    //     error: "No tasks found",
+    //   });
+    // }
 
     const totalTasks = await prisma.task.count({
       where: whereClause,
@@ -160,12 +160,11 @@ async function show(req, res, next) {
       });
     }
 
-    const task = await prisma.task.findUnique({
+    const task = await prisma.task.findFirst({
       where: {
-        id_userId: {
-          id: taskId,
-          userId: req.user.id,
-        },
+        id: taskId,
+        userId: req.user.id,
+        deletedAt: null,
       },
       select: {
         id: true,
@@ -216,6 +215,20 @@ async function update(req, res, next) {
       });
     }
 
+    const task = await prisma.task.findFirst({
+      where: {
+        id: taskId,
+        userId: req.user.id,
+        deletedAt: null,
+      },
+    });
+
+    if (!task) {
+      return res.status(404).json({
+        message: "The task was not found",
+      });
+    }
+
     const updatedTask = await prisma.task.update({
       data: taskChange,
       where: {
@@ -229,11 +242,11 @@ async function update(req, res, next) {
 
     return res.status(200).json(updatedTask);
   } catch (err) {
-    if (err.code === "P2025") {
-      return res.status(404).json({
-        message: "The task was not found.",
-      });
-    }
+    // if (err.code === "P2025") {
+    //   return res.status(404).json({
+    //     message: "The task was not found.",
+    //   });
+    // }
     return next(err);
   }
 }
@@ -245,6 +258,20 @@ async function deleteTask(req, res, next) {
     if (!taskId) {
       return res.status(400).json({
         message: "The task ID passed is not valid.",
+      });
+    }
+
+    const task = await prisma.task.findFirst({
+      where: {
+        id: taskId,
+        userId: req.user.id,
+        deletedAt: null,
+      },
+    });
+
+    if (!task) {
+      return res.status(404).json({
+        message: "The task was not found",
       });
     }
 
@@ -269,11 +296,6 @@ async function deleteTask(req, res, next) {
 
     return res.status(200).json(deletedTask);
   } catch (err) {
-    if (err.code === "P2025") {
-      return res.status(404).json({
-        message: "The task was not found.",
-      });
-    }
     return next(err);
   }
 }
@@ -300,6 +322,97 @@ async function trashBin(req, res, next) {
       },
     });
     return res.status(200).json(tasks);
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function restoreTask(req, res, next) {
+  try {
+    const taskId = parseInt(req.params?.id);
+
+    if (!taskId) {
+      return res.status(400).json({
+        message: "The task ID passed is not valid.",
+      });
+    }
+
+    const task = await prisma.task.findFirst({
+      where: {
+        userId: req.user.id,
+        id: taskId,
+        deletedAt: {
+          not: null,
+        },
+      },
+      select: {
+        title: true,
+        isCompleted: true,
+        id: true,
+        priority: true,
+        createdAt: true,
+        deletedAt: true,
+      },
+    });
+
+    if (!task) {
+      return res.status(404).json({
+        message: "The deleted task was not found.",
+      });
+    }
+
+    const restoredTask = await prisma.task.update({
+      where: {
+        id_userId: {
+          id: taskId,
+          userId: req.user.id,
+        },
+      },
+      data: {
+        deletedAt: null,
+      },
+    });
+    return res.status(200).json(restoredTask);
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function permanentlyDeleteTask(req, res, next) {
+  try {
+    const taskId = parseInt(req.params?.id);
+
+    if (!taskId) {
+      return res.status(400).json({
+        message: "The task ID passed is not valid.",
+      });
+    }
+
+    const task = await prisma.task.findFirst({
+      where: {
+        id: taskId,
+        userId: req.user.id,
+        deletedAt: {
+          not: null,
+        },
+      },
+    });
+
+    if (!task) {
+      return res.status(404).json({
+        message: "The deleted task was not found.",
+      });
+    }
+
+    const deletedTask = await prisma.task.delete({
+      where: {
+        id_userId: {
+          id: taskId,
+          userId: req.user.id,
+        },
+      },
+    });
+    return res.status(200).json(deletedTask);
   } catch (err) {
     return next(err);
   }
@@ -358,6 +471,8 @@ module.exports = {
   update,
   deleteTask,
   trashBin,
+  restoreTask,
+  permanentlyDeleteTask,
   taskCounter,
   bulkCreate,
 };
