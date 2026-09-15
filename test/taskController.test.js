@@ -8,6 +8,9 @@ const {
   create,
   update,
   deleteTask,
+  trashBin,
+  restoreTask,
+  permanentlyDeleteTask,
 } = require("../controllers/taskController");
 
 const EventEmitter = require("events");
@@ -145,7 +148,7 @@ describe("test getting created tasks", () => {
     expect(saveData.tasks[0].userId).toBeUndefined();
   });
 
-  it("25. If you get the list of tasks using user2's id, you get a 404", async () => {
+  it("25. If you get the list of tasks using user2's id, you get a 200 with an empty tasks array", async () => {
     const req = httpMocks.createRequest({
       method: "GET",
     });
@@ -155,7 +158,9 @@ describe("test getting created tasks", () => {
       eventEmitter: EventEmitter,
     });
     await waitForRouteHandlerCompletion(index, req, res);
-    expect(res.statusCode).toBe(404);
+    expect(res.statusCode).toBe(200);
+    const data = res._getJSONData();
+    expect(data.tasks).toEqual([]);
   });
 
   it("26. can retrieve the created task using show()", async () => {
@@ -244,7 +249,7 @@ describe("testing update and delete of tasks", () => {
     expect(res.statusCode).toBe(200);
   });
 
-  it("32. Retrieving user1's tasks now returns a 404", async () => {
+  it("32. Retrieving user1's active tasks after deletion returns an empty array", async () => {
     const req = httpMocks.createRequest({
       method: "GET",
     });
@@ -253,6 +258,102 @@ describe("testing update and delete of tasks", () => {
       eventEmitter: EventEmitter,
     });
     await waitForRouteHandlerCompletion(index, req, res);
-    expect(res.statusCode).toBe(404);
+    expect(res.statusCode).toBe(200);
+    const data = res._getJSONData();
+    expect(data.tasks).toEqual([]);
+  });
+});
+
+describe("testing trash bin, restore, and permanent delete", () => {
+  it("66. User1 can see the deleted task in the trash bin", async () => {
+    const req = httpMocks.createRequest({
+      method: "GET",
+    });
+    req.user = { id: user1.id };
+    const res = httpMocks.createResponse({
+      eventEmitter: EventEmitter,
+    });
+    await waitForRouteHandlerCompletion(trashBin, req, res);
+    expect(res.statusCode).toBe(200);
+    const data = res._getJSONData();
+    expect(data.length).toBe(1);
+    expect(data[0].id).toBe(saveTaskId);
+    expect(data[0].deletedAt).not.toBeNull();
+  });
+  it("67. User2 cannot see user1's deleted task in the trash bin", async () => {
+    const req = httpMocks.createRequest({
+      method: "GET",
+    });
+    req.user = { id: user2.id };
+    const res = httpMocks.createResponse({
+      eventEmitter: EventEmitter,
+    });
+    await waitForRouteHandlerCompletion(trashBin, req, res);
+    expect(res.statusCode).toBe(200);
+    const data = res._getJSONData();
+    expect(data).toEqual([]);
+  });
+  it("68. User1 can restore the deleted task", async () => {
+    const req = httpMocks.createRequest({
+      method: "PATCH",
+    });
+    req.user = { id: user1.id };
+    req.params = { id: saveTaskId.toString() };
+    const res = httpMocks.createResponse({
+      eventEmitter: EventEmitter,
+    });
+    await waitForRouteHandlerCompletion(restoreTask, req, res);
+    expect(res.statusCode).toBe(200);
+    const data = res._getJSONData();
+    expect(data.id).toBe(saveTaskId);
+    expect(data.deletedAt).toBeNull();
+  });
+  it("69. Restored task appears in user1's active tasks", async () => {
+    const req = httpMocks.createRequest({
+      method: "GET",
+    });
+    req.user = { id: user1.id };
+    const res = httpMocks.createResponse({
+      eventEmitter: EventEmitter,
+    });
+    await waitForRouteHandlerCompletion(index, req, res);
+    expect(res.statusCode).toBe(200);
+    const data = res._getJSONData();
+    expect(data.tasks.length).toBe(1);
+    expect(data.tasks[0].id).toBe(saveTaskId);
+  });
+  it("70. User1 can move the restored task back to the trash bin", async () => {
+    const req = httpMocks.createRequest({
+      method: "DELETE",
+    });
+    req.user = { id: user1.id };
+    req.params = { id: saveTaskId.toString() };
+    const res = httpMocks.createResponse({
+      eventEmitter: EventEmitter,
+    });
+    await waitForRouteHandlerCompletion(deleteTask, req, res);
+    expect(res.statusCode).toBe(200);
+    const data = res._getJSONData();
+    expect(data.deletedAt).not.toBeNull();
+  });
+  it("71. User1 can permanently delete a task from the trash bin", async () => {
+    const req = httpMocks.createRequest({
+      method: "DELETE",
+    });
+    req.user = { id: user1.id };
+    req.params = { id: saveTaskId.toString() };
+    const res = httpMocks.createResponse({
+      eventEmitter: EventEmitter,
+    });
+    await waitForRouteHandlerCompletion(permanentlyDeleteTask, req, res);
+    expect(res.statusCode).toBe(200);
+  });
+  it("72. Permanently deleted task no longer exists in the database", async () => {
+    const task = await prisma.task.findUnique({
+      where: {
+        id: saveTaskId,
+      },
+    });
+    expect(task).toBeNull();
   });
 });

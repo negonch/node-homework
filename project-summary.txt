@@ -1,1 +1,38 @@
-https://node-homework-6aq9.onrender.com
+Node.js Final Project Summary
+
+Deployed Backend:
+<https://node-homework-6aq9.onrender.com>
+
+Extra Features:
+
+Trash Bin
+
+Instead of permanently deleting a task immediately, deleted tasks are
+moved to a trash bin by setting the deletedAt field.
+
+Move a task to Trash:
+DELETE /api/tasks/:id
+
+Example:
+DELETE /api/tasks/17
+
+View Trash Bin:
+GET /api/tasks/trashBin
+
+Restore a Task:
+PATCH /api/tasks/:id/restore
+
+Example:
+PATCH /api/tasks/17/restore
+
+Permanently Delete a Task:
+DELETE /api/tasks/:id/permanent
+
+Example:
+DELETE /api/tasks/17/permanent
+
+Authentication
+
+Protected endpoints require authentication using the JWT cookie.
+State-changing protected requests also require the CSRF token in:
+X-CSRF-TOKEN
