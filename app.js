@@ -6,8 +6,6 @@ const errorHandler = require("./middleware/error-handler");
 
 const app = express();
 
-// const timeRouter = require("./routes/timeRoutes");
-
 const jwtMiddleware = require("./middleware/jwtMiddleware");
 const taskRouter = require("./routes/taskRoutes");
 const prisma = require("./db/prisma");
@@ -35,7 +33,6 @@ global.tasks = [];
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 app.use(xss());
-// app.use("/api", timeRouter);
 app.use("/api/users", userRoutes);
 app.use("/api/tasks", jwtMiddleware, taskRouter);
 app.use("/api/analytics", jwtMiddleware, analyticsRoutes);

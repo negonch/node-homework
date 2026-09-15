@@ -7,9 +7,8 @@ let csrfToken = null;
 const { app, server } = require("../app");
 
 beforeAll(async () => {
-  // clear database
-  await prisma.Task.deleteMany(); // delete all tasks
-  await prisma.User.deleteMany(); // delete all users
+  await prisma.Task.deleteMany();
+  await prisma.User.deleteMany();
   agent = request.agent(app);
 });
 
@@ -19,7 +18,7 @@ afterAll(async () => {
 });
 
 describe("register a user ", () => {
-  let saveRes = null; // we'll declare this out here, so that we can reference it in several tests
+  let saveRes = null;
   it("46. it creates the user entry", async () => {
     const newUser = {
       name: "John Deere",

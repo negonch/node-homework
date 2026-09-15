@@ -1,7 +1,3 @@
-// GET /users/:id → getUserAnalytics
-// GET /users → getUsersWithStats
-// GET /tasks/search → searchTasks
-
 const express = require("express");
 
 const {

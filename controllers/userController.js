@@ -12,18 +12,16 @@ const jwt = require("jsonwebtoken");
 const cookieFlags = (req) => {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production", // only when HTTPS is available
+    secure: process.env.NODE_ENV === "production",
     sameSite: "Strict",
   };
 };
 
 const setJwtCookie = (req, res, user) => {
-  // Sign JWT
   const payload = { id: user.id, csrfToken: randomUUID() };
-  const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" }); // 1 hour expiration
-  // Set cookie.  Note that the cookie flags have to be different in production and in test.
-  res.cookie("jwt", token, { ...cookieFlags(req), maxAge: 3600000 }); // 1 hour expiration
-  return payload.csrfToken; // this is needed in the body returned by logon() or register()
+  const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
+  res.cookie("jwt", token, { ...cookieFlags(req), maxAge: 3600000 });
+  return payload.csrfToken;
 };
 
 const { StatusCodes } = require("http-status-codes");
@@ -53,7 +51,6 @@ async function register(req, res, next) {
       params.append("response", token);
       params.append("remoteip", req.ip);
       const response = await fetch(
-        // might throw an error that would cause a 500 from the error handler
         "https://www.google.com/recaptcha/api/siteverify",
         {
           method: "POST",
@@ -70,7 +67,6 @@ async function register(req, res, next) {
       process.env.RECAPTCHA_BYPASS &&
       req.get("X-Recaptcha-Test") === process.env.RECAPTCHA_BYPASS
     ) {
-      // might be a test environment
       isPerson = true;
     }
     if (!isPerson) {
@@ -93,12 +89,7 @@ async function register(req, res, next) {
     value.hashedPassword = await hashPassword(value.password);
     delete value.password;
 
-    // In your register method, after validation and password hashing:
-    // Do the Joi validation, so that value contains the user entry you want.
-    // hash the password, and put it in value.hashedPassword
-    // delete value.password as that doesn't get stored
     const result = await prisma.$transaction(async (tx) => {
-      // Create user account (similar to Assignment 6, but using tx instead of prisma)
       const newUser = await tx.user.create({
         data: {
           email: value.email,
@@ -108,7 +99,6 @@ async function register(req, res, next) {
         select: { id: true, email: true, name: true, createdAt: true },
       });
 
-      // Create 3 welcome tasks using createMany
       const welcomeTaskData = [
         {
           title: "Complete your profile",
@@ -120,7 +110,6 @@ async function register(req, res, next) {
       ];
       await tx.task.createMany({ data: welcomeTaskData });
 
-      // Fetch the created tasks to return them
       const welcomeTasks = await tx.task.findMany({
         where: {
           userId: newUser.id,
@@ -146,10 +135,9 @@ async function register(req, res, next) {
     });
   } catch (err) {
     if (err.code === "P2002") {
-      // send the appropriate error back -- the email was already registered
       return res.status(400).json({ error: "Email already registered" });
     } else {
-      return next(err); // the error handler takes care of other errors
+      return next(err);
     }
   }
 }
@@ -165,8 +153,7 @@ async function logon(req, res, next) {
     });
   }
   try {
-    email = email.toLowerCase(); // Joi validation always converts the email to lower case
-    // but you don't want logon to fail if the user types mixed case
+    email = email.toLowerCase();
     const user = await prisma.user.findUnique({
       where: { email },
       select: {
@@ -176,7 +163,6 @@ async function logon(req, res, next) {
         hashedPassword: true,
       },
     });
-    // also Prisma findUnique can't do a case insensitive search
 
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });

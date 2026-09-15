@@ -9,7 +9,6 @@ const { register, logoff, logon } = require("../controllers/userController");
 const jwtMiddleware = require("../middleware/jwtMiddleware");
 const jwt = require("jsonwebtoken");
 
-// a few useful globals
 let saveRes = null;
 let saveData = null;
 let saveReq = null;
@@ -33,9 +32,8 @@ function MockResponseWithCookies() {
 }
 
 beforeAll(async () => {
-  // clear database
-  await prisma.Task.deleteMany(); // delete all tasks
-  await prisma.User.deleteMany(); // delete all users
+  await prisma.Task.deleteMany();
+  await prisma.User.deleteMany();
 });
 
 afterAll(() => {

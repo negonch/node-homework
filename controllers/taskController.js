@@ -122,12 +122,6 @@ async function index(req, res, next) {
       orderBy: getOrderBy(req.query),
     });
 
-    // if (tasks.length === 0) {
-    //   return res.status(404).json({
-    //     error: "No tasks found",
-    //   });
-    // }
-
     const totalTasks = await prisma.task.count({
       where: whereClause,
     });
@@ -242,11 +236,6 @@ async function update(req, res, next) {
 
     return res.status(200).json(updatedTask);
   } catch (err) {
-    // if (err.code === "P2025") {
-    //   return res.status(404).json({
-    //     message: "The task was not found.",
-    //   });
-    // }
     return next(err);
   }
 }
@@ -418,18 +407,15 @@ async function permanentlyDeleteTask(req, res, next) {
   }
 }
 
-// Bulk create with validation
 async function bulkCreate(req, res, next) {
   const { tasks } = req.body;
 
-  // Validate the tasks array
   if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
     return res.status(400).json({
       error: "Invalid request data. Expected an array of tasks.",
     });
   }
 
-  // Validate all tasks before insertion
   const validTasks = [];
   for (const task of tasks) {
     const { error, value } = taskSchema.validate(task);
@@ -447,7 +433,6 @@ async function bulkCreate(req, res, next) {
     });
   }
 
-  // Use createMany for batch insertion
   try {
     const result = await prisma.task.createMany({
       data: validTasks,

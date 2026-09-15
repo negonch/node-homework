@@ -1,5 +1,5 @@
 require("dotenv").config();
-process.env.DATABASE_URL = process.env.TEST_DATABASE_URL; // point to the test database!
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
 const prisma = require("../db/prisma");
 const httpMocks = require("node-mocks-http");
 const {
@@ -26,8 +26,8 @@ let saveTaskId = null;
 
 beforeAll(async () => {
   // clear database
-  await prisma.Task.deleteMany(); // delete all tasks
-  await prisma.User.deleteMany(); // delete all users
+  await prisma.Task.deleteMany();
+  await prisma.User.deleteMany();
   user1 = await prisma.User.create({
     data: {
       name: "Bob",

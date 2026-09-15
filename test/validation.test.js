@@ -62,20 +62,6 @@ describe("user object validation tests", () => {
     ).toBeDefined();
   });
 
-  //   it("6.1. name must be valid (3 to 30 characters)", () => {
-  //     const { error } = userSchema.validate(
-  //       {
-  //         name: "Bobbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-  //         email: "bob@sample.com",
-  //         password: "StrongPass123!",
-  //       },
-  //       { abortEarly: false },
-  //     );
-  //     expect(
-  //       error.details.find((detail) => detail.context.key == "name"),
-  //     ).toBeDefined();
-  //   });
-
   it("7. valid user object returns no error", () => {
     const { error } = userSchema.validate({
       name: "Bob",

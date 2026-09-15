@@ -159,7 +159,7 @@ The response includes:
 - Pagination metadata
 
 3.3 Advanced Task Search
-GET /api/analytics/tasks/search?q=homework&limit=20
+GET /api/analytics/tasks/search?q=Task&limit=20
 Searches active tasks using PostgreSQL.
 Searches:
 - Task titles
@@ -254,3 +254,21 @@ Tests cover:
 - Trash Bin
 - Task restoration
 - Permanent deletion
+
+10. API endpoints:
+POST /api/users/register	    - Register user
+POST /api/users/logon	        - Log in
+POST /api/users/logoff	        - Log out
+POST /api/tasks	                - Create task
+GET	/api/tasks	                - Get active tasks
+GET /api/tasks/:id	            - Get one task
+PATCH /api/tasks/:id	        - Update task
+POST /api/tasks/bulk	        - Bulk create tasks
+DELETE /api/tasks/:id	        - Soft delete task
+GET /api/tasks/trashBin	        - Trash bin - GEt deleted tasks
+PATCH /api/tasks/:id/restore	- Restore deleted task
+DELETE /api/tasks/:id/permanent	- Permanently delete task
+POST /api/tasks/bulk	        - Bulk create tasks
+GET /api/analytics/users/:id	- Get user analytics
+GET	/api/analytics/users	    - Get users with task statistics
+GET	/api/analytics/tasks/search	- Advanced task search
