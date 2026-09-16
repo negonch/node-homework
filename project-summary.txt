@@ -1,0 +1,319 @@
+Node.js Final Project Summary
+
+This project is a REST API for a task management application built with Node.js, Express, PostgreSQL, and Prisma ORM.
+The application provides secure user authentication and complete task CRUD functionality. It also includes several additional features: 
+task priorities, pagination, search/filtering, sorting, bulk task creation, analytics, automatic welcome tasks, and a Trash Bin system 
+with soft delete, restore, and permanent deletion.
+The backend includes validation, authentication, authorization, security middleware, centralized error handling, and automated testing.
+
+Deployed Backend:
+<https://node-homework-6aq9.onrender.com>
+
+Project Structure:
+
+├── app.js                     
+│
+├── controllers
+│   ├── analyticsController.js 
+│   ├── taskController.js      
+│   └── userController.js      
+│
+├── db
+│   ├── pg-pool.js 
+│   └── prisma.js              
+│
+├── middleware
+│   ├── auth.js 
+│   ├── error-handler.js      
+│   ├── jwtMiddleware.js       
+│   └── not-found.js
+│
+├── prisma
+│   └── schema.prisma         
+│
+├── routes
+│   ├── analyticsRoutes.js
+│   ├── taskRoutes.js
+│   └── userRoutes.js
+│
+├── test
+│   ├── taskController.test.js
+│   ├── user.controller.test.js
+│   ├── user.function.test.js
+│   ├── validation.test.js
+│   └── waitForRouteHandlerCompletion.js
+│
+├── validation
+│   ├── taskSchema.js
+│   └── userSchema.js
+│
+├── eslint.config.js
+├── package.json
+├── project-links.txt
+└── project-summary.txt
+
+Project Features and Technical Implementation: 
+
+1. Authentication:
+
+1.1 Register User - Creates a new user account.
+POST /api/users/register
+request body:
+{
+  "name": "Natalia",
+  "email": "natalia@test.com",
+  "password": "Test123!"
+}
+Registration includes:
+- User input validation
+- Email and password validation
+- Google reCAPTCHA verification
+- Password hashing using crypto.scrypt()
+- Unique email protection
+- JWT creation
+- CSRF token generation
+- HTTP-only authentication cookie
+- Automatic creation of three welcome tasks
+The user and welcome tasks are created inside a Prisma transaction.
+
+1.2 Logon - Authenticates an existing user.
+POST /api/users/logon
+request body:
+{
+  "email": "natalia@test.com",
+  "password": "Test123!"
+}
+Successful authentication:
+- Verifies the password against the stored hash
+- Generates a JWT
+- Stores the JWT in an HTTP-only cookie
+- Generates a CSRF token
+- Returns the user’s name, email, and CSRF token
+The JWT expires after one hour.
+
+1.3 Logoff
+POST /api/users/logoff
+Logs out the authenticated user by clearing the JWT cookie.
+Requires authentication and CSRF protection.
+No request body is required.
+
+2. Task CRUD API:
+All /api/tasks endpoints require JWT authentication.
+State-changing operations also require the CSRF token through the X-CSRF-TOKEN header.
+
+2.1 Create Task - Creates a task for the authenticated user.
+POST /api/tasks
+request body:
+{
+  "title": "Task1"
+  "priority": "high",
+  "isCompleted": false
+}
+The authenticated user’s ID is automatically assigned to the task.
+
+2.2 Get Active Tasks - Returns active tasks belonging to the authenticated user.
+GET /api/tasks
+
+2.3 Get One Task - Returns one active task.
+GET /api/tasks/:id
+The task must:
+- Exist
+- Belong to the authenticated user
+- Not be soft deleted
+Users cannot access tasks belonging to another user.
+
+2.4 Update Task - Updates an active task belonging to the authenticated user.
+PATCH /api/tasks/:id
+request body:
+{
+  "title": "Update Task1"
+}
+Task input is validated before the database update.
+
+2.5 Delete Task - Moves an active task into the Trash Bin.
+DELETE /api/tasks/:id
+The task is not immediately removed from PostgreSQL.
+
+2.6 Pagination - The task API supports pagination.
+GET /api/tasks?page=1&limit=10
+Parameters:
+- page — default 1, minimum 1
+- limit — default 10, minimum 1, maximum 100
+
+2.7 Task Search / Filtering - Searches the authenticated user’s active tasks by title.
+GET /api/tasks?find=Task1
+Search is case-insensitive.
+Deleted tasks are excluded.
+Pagination can be combined with search.
+
+2.8 Task Sorting - Tasks can be sorted using sortBy and sortDirection.
+GET /api/tasks?sortBy=priority&sortDirection=asc
+Supported sort fields:
+- title
+- priority
+- createdAt
+- id
+- isCompleted
+Supported directions:
+- asc
+- desc
+Default sorting:
+createdAt DESC
+Sorting can be combined with pagination and filtering.
+
+2.9 Trash Bin - Deleted tasks can be viewed in the Trash Bin.
+GET /api/tasks/trashBin
+Returns soft-deleted tasks belonging to the authenticated user.
+
+2.10 Restore Task - Restores a task from the Trash Bin.
+PATCH /api/tasks/:id/restore
+The task then appears again in the normal active task list.
+
+2.11 Permanently Delete Task - Permanently deletes a task from PostgreSQL.
+DELETE /api/tasks/:id/permanent
+The task must already be in the Trash Bin.
+
+2.12 Bulk Task Creation
+POST /api/tasks/bulk
+request body:
+{
+  "tasks": [
+    {
+      "title": "Task21"
+    },
+    {
+      "title": "Task22"
+    }
+  ]
+}
+
+3. Analytics
+
+3.1 User Analytics - Returns analytics for a user.
+GET /api/analytics/users/:id
+The response contains:
+- Task statistics grouped by completion status
+- Up to 10 recent active tasks
+- Task activity from the previous seven days
+
+3.2 Users With Task Statistics - Returns users together with task statistics.
+GET /api/analytics/users
+The response includes:
+- User information
+- Active task count
+- Up to five incomplete active tasks
+- Pagination metadata
+
+3.3 Advanced Task Search
+GET /api/analytics/tasks/search?q=Task&limit=20
+Searches active tasks using PostgreSQL.
+Searches:
+- Task titles
+- User names
+The q parameter is required and must contain at least two characters.
+Search is case-insensitive and results are ranked by relevance:
+- Exact title match
+- Title starts with the search term
+- Partial match
+The limit parameter is optional and defaults to 20.
+The SQL query is parameterized to protect against SQL injection.
+
+4. Task Priorities - Tasks support priority values.
+Tasks support priority levels:
+- low
+- medium
+- high
+If no priority is provided when creating a task, the default priority is medium.
+
+5. Automatic Welcome Tasks
+Registration automatically creates three starter tasks:
+- Complete your profile
+- Add your first task
+- Explore the app
+
+6. PostgreSQL and Prisma
+PostgreSQL is used for persistent application data.
+Prisma ORM handles:
+- User records
+- Task records
+- User/task relationships
+- CRUD operations
+- Soft deletion
+- Permanent deletion
+- Transactions
+- Pagination
+- Aggregation
+- Bulk insertion
+The database contains a one-to-many relationship:
+One user can have many tasks, and each task belongs to one user.
+Prisma migrations are used to manage database schema changes.
+
+7. Validation
+User and task input is validated before storage.
+Validation includes:
+- Required fields
+- Email format
+- Password requirements
+- User name
+- Task title
+- Completion status
+- Priority
+- Partial task updates
+Invalid input returns an appropriate client error.
+
+8. Security
+The application includes multiple security measures:
+- Password hashing with crypto.scrypt()
+- Random password salts
+- Timing-safe password comparison
+- JWT authentication
+- HTTP-only JWT cookies
+- One-hour JWT expiration
+- Secure cookies in production
+- SameSite=Strict
+- CSRF protection
+- Google reCAPTCHA
+- Helmet
+- XSS protection
+- Rate limiting
+- Request body size limits
+- Input validation
+- User-level task ownership checks
+- Environment variables for secrets
+- Centralized error handling
+
+9. Automated Testing
+Tests cover:
+- User validation
+- Task validation
+- Registration
+- Logon
+- Logoff
+- JWT authentication
+- CSRF protection
+- Task creation
+- Task retrieval
+- Task updates
+- Task deletion
+- User ownership/access control
+- Soft deletion
+- Trash Bin
+- Task restoration
+- Permanent deletion
+
+10. API endpoints:
+POST /api/users/register	    - Register user
+POST /api/users/logon	        - Log in
+POST /api/users/logoff	        - Log out
+POST /api/tasks	                - Create task
+GET	/api/tasks	                - Get active tasks
+GET /api/tasks/:id	            - Get one task
+PATCH /api/tasks/:id	        - Update task
+DELETE /api/tasks/:id	        - Soft delete task
+GET /api/tasks/trashBin	        - Get deleted tasks from Trash bin
+PATCH /api/tasks/:id/restore	- Restore deleted task
+DELETE /api/tasks/:id/permanent	- Permanently delete task
+POST /api/tasks/bulk	        - Bulk create tasks
+GET /api/analytics/users/:id	- Get user analytics
+GET	/api/analytics/users	    - Get users with task statistics
+GET	/api/analytics/tasks/search	- Advanced task search

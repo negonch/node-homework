@@ -1,0 +1,1 @@
+Create a script ( core-modules-demo.js ) that: Uses the os module to log system information (platform, CPU, memory).  Uses the path module to join two paths and log the result.  Uses the fs.promises API to write and then read a file, sample-files/demo.txt.  Be sure to write it inside the sample-files folder so the tests can find it.

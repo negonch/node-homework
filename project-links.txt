@@ -1,1 +1,14 @@
- 
+ Node.js Final Project Links
+
+GitHub Repository:
+https://github.com/negonch/node-homework
+
+Pull Request:
+https://github.com/negonch/node-homework/pull/11
+
+Deployed Backend (Render):
+https://node-homework-6aq9.onrender.com
+
+Final Project Presentation:
+https://youtu.be/eAVkTS14KC8
+
