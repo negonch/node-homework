@@ -9,6 +9,51 @@ The backend includes validation, authentication, authorization, security middlew
 Deployed Backend:
 <https://node-homework-6aq9.onrender.com>
 
+Project Structure:
+
+├── app.js                     
+│
+├── controllers
+│   ├── analyticsController.js 
+│   ├── taskController.js      
+│   └── userController.js      
+│
+├── db
+│   ├── pg-pool.js 
+│   └── prisma.js              
+│
+├── middleware
+│   ├── auth.js 
+│   ├── error-handler.js      
+│   ├── jwtMiddleware.js       
+│   └── not-found.js
+│
+├── prisma
+│   └── schema.prisma         
+│
+├── routes
+│   ├── analyticsRoutes.js
+│   ├── taskRoutes.js
+│   └── userRoutes.js
+│
+├── test
+│   ├── taskController.test.js
+│   ├── user.controller.test.js
+│   ├── user.function.test.js
+│   ├── validation.test.js
+│   └── waitForRouteHandlerCompletion.js
+│
+├── validation
+│   ├── taskSchema.js
+│   └── userSchema.js
+│
+├── eslint.config.js
+├── package.json
+├── project-links.txt
+└── project-summary.txt
+
+Project Features and Technical Implementation: 
+
 1. Authentication:
 
 1.1 Register User - Creates a new user account.
@@ -61,6 +106,8 @@ POST /api/tasks
 request body:
 {
   "title": "Task1"
+  "priority": "high",
+  "isCompleted": false
 }
 The authenticated user’s ID is automatically assigned to the task.
 
@@ -96,7 +143,6 @@ Parameters:
 2.7 Task Search / Filtering - Searches the authenticated user’s active tasks by title.
 GET /api/tasks?find=Task1
 Search is case-insensitive.
-The search query must contain at least two characters.
 Deleted tasks are excluded.
 Pagination can be combined with search.
 
@@ -115,7 +161,7 @@ Default sorting:
 createdAt DESC
 Sorting can be combined with pagination and filtering.
 
-2.9 Trash Bin - Task can be deleted to the Trash Bin.
+2.9 Trash Bin - Deleted tasks can be viewed in the Trash Bin.
 GET /api/tasks/trashBin
 Returns soft-deleted tasks belonging to the authenticated user.
 
@@ -199,7 +245,7 @@ Prisma ORM handles:
 - Aggregation
 - Bulk insertion
 The database contains a one-to-many relationship:
-Each task belongs to one user. One user can have several tasks.
+One user can have many tasks, and each task belongs to one user.
 Prisma migrations are used to manage database schema changes.
 
 7. Validation
@@ -263,9 +309,8 @@ POST /api/tasks	                - Create task
 GET	/api/tasks	                - Get active tasks
 GET /api/tasks/:id	            - Get one task
 PATCH /api/tasks/:id	        - Update task
-POST /api/tasks/bulk	        - Bulk create tasks
 DELETE /api/tasks/:id	        - Soft delete task
-GET /api/tasks/trashBin	        - Trash bin - GEt deleted tasks
+GET /api/tasks/trashBin	        - Get deleted tasks from Trash bin
 PATCH /api/tasks/:id/restore	- Restore deleted task
 DELETE /api/tasks/:id/permanent	- Permanently delete task
 POST /api/tasks/bulk	        - Bulk create tasks

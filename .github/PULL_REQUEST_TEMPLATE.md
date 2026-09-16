@@ -1,5 +1,3 @@
-<!--- Provide a general summary of your code in the Title above -->
-
 ## Description
 
 Completed the Node.js Task Management API final project and added several backend enhancements.
